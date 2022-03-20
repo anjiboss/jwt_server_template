@@ -1,6 +1,6 @@
 require("dotenv").config();
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "../utils/jwtController";
 
 export const TokenAuthentication = async (
   req: Request,
@@ -33,7 +33,11 @@ export const TokenAuthentication = async (
     });
   }
 
-  const claims = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET!);
+  const claims = jwtVerify<AccessTokenInterface>(
+    accessToken,
+    process.env.ACCESS_TOKEN_SECRET!
+  );
+  console.log({ claims });
   if (!claims) {
     return res.status(400).json({ message: "Error : Invalid token!" });
   }

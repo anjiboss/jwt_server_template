@@ -285,22 +285,22 @@ router.post("/token/logout", async (req, res) => {
         .json({ success: false, message: "Error : Invalid auth method!" });
     }
     //get the refreshToken list from database by tokenPoayloads id
-    const getRepo = getRepository(User);
+    const profileRepo = getRepository(Profile);
     const refreshTokenPayloads = Jwt.decode(
       refreshToken
     ) as RefreshTokenInterface;
-    const checkRefreshToken = await getRepo.findOne({
-      select: ["refreshToken"],
+    const userProfile = await profileRepo.findOne({
       where: { id: refreshTokenPayloads.id },
+      relations: ["user"],
     });
     //if no user
-    if (!checkRefreshToken) {
+    if (!userProfile) {
       return res
         .status(400)
         .json({ success: false, message: "Error : User not exist!" });
     }
     //check is the token in the list or not
-    let refreshTokenList = checkRefreshToken.refreshToken as string[];
+    let refreshTokenList = userProfile.user.refreshToken as string[];
     //not in the list
     if (!refreshTokenList.includes(refreshToken)) {
       return res
@@ -312,10 +312,8 @@ router.post("/token/logout", async (req, res) => {
       (token) => token != refreshToken
     );
     //create a update user form
-    const updateRefreshToken = new User();
-    updateRefreshToken.id = refreshTokenPayloads.id;
-    updateRefreshToken.refreshToken = refreshTokenList;
-    await getRepo.save(updateRefreshToken);
+    userProfile.user.refreshToken = refreshTokenList;
+    await getRepository(User).save(userProfile.user);
     return res
       .status(200)
       .json({ success: true, message: "Refresh token removed." });
