@@ -33,11 +33,7 @@ export const TokenAuthentication = async (
     });
   }
 
-  const claims = jwtVerify<AccessTokenInterface>(
-    accessToken,
-    process.env.ACCESS_TOKEN_SECRET!
-  );
-  console.log({ claims });
+  const claims = jwtVerify(accessToken, process.env.ACCESS_TOKEN_SECRET!);
   if (!claims) {
     return res.status(400).json({ message: "Error : Invalid token!" });
   }
