@@ -11,7 +11,7 @@ import {
   refreshTokenSecret,
 } from "../constants/tokenConstant";
 import { Profile } from "../entity/Profile";
-import { jwtVerify } from "../utils/jwtController";
+import { jwtDecode, jwtVerify } from "../utils/jwtController";
 
 const router = express.Router();
 
@@ -117,13 +117,8 @@ router.post("/login", async (req, res) => {
       newRefreshToken = [refreshToken];
     } else {
       newRefreshToken = userCheck.refreshToken;
-      // NOTE: Why ? Why not newRefreshToken.push(refreshToken)
-      newRefreshToken.push(...[refreshToken]);
+      newRefreshToken.push(refreshToken);
     }
-    // NOTE: Not necessary
-    // const updateRefreshToken = new User();
-    // updateRefreshToken.id = userCheck.id;
-    // updateRefreshToken.refreshToken = newRefreshToken;
     userCheck.refreshToken = newRefreshToken;
     userRepo.save(userCheck);
     return res.status(200).json({
@@ -255,68 +250,66 @@ router.post("/token/refresh", async (req, res) => {
 
 // ANCHOR Revoke refresh token after loagout
 router.post("/token/logout", async (req, res) => {
-  try {
-    //check if the req.headers["authorization"] exist
-    if (!req.headers["authorization"]) {
-      return res.status(400).json({
-        success: false,
-        message: "Error : Missing Authorization Header provided!",
-      });
-    }
-
-    const authHeader: string = req.headers["authorization"];
-    // //getting authMethod and accessToken from the authHeader
-    const authMethod: string = authHeader.split(" ")[0]; //authMethod == Bearer
-    const refreshToken: string = authHeader.split(" ")[1];
-
-    //check is the authMethod & accessToken exist and the is method correct
-    if (!authMethod || !refreshToken) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Error : Invalid auth header!" });
-    } else if (authMethod !== "Bearer") {
-      return res
-        .status(400)
-        .json({ success: false, message: "Error : Invalid auth method!" });
-    }
-    //get the refreshToken list from database by tokenPoayloads id
-    const profileRepo = getRepository(Profile);
-    // FIXME Change to jwtVerifle function and take payload
-    const refreshTokenPayloads = Jwt.decode(refreshToken) as RefreshToken;
-    const userProfile = await profileRepo.findOne({
-      where: { id: refreshTokenPayloads.id },
-      relations: ["user"],
+  //check if the req.headers["authorization"] exist
+  if (!req.headers["authorization"]) {
+    return res.status(400).json({
+      success: false,
+      message: "Error : Missing Authorization Header provided!",
     });
-    //if no user
-    if (!userProfile) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Error : User not exist!" });
-    }
-    //check is the token in the list or not
-    let refreshTokenList = userProfile.user.refreshToken as string[];
-    //not in the list
-    if (!refreshTokenList.includes(refreshToken)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Error : Token is not in the list!" });
-    }
-    //in the list
-    refreshTokenList = refreshTokenList.filter(
-      (token) => token != refreshToken
-    );
-    //create a update user form
-    userProfile.user.refreshToken = refreshTokenList;
-    await getRepository(User).save(userProfile.user);
-    return res
-      .status(200)
-      .json({ success: true, message: "Refresh token removed." });
-  } catch (e) {
-    console.log(e);
-    return res
-      .status(500)
-      .json({ success: false, message: "Error : Something is broken!" });
   }
+
+  const authHeader: string = req.headers["authorization"];
+  // //getting authMethod and accessToken from the authHeader
+  const authMethod: string = authHeader.split(" ")[0]; //authMethod == Bearer
+  const refreshToken: string = authHeader.split(" ")[1];
+
+  //check is the authMethod & accessToken exist and the is method correct
+  if (!authMethod || !refreshToken) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Error : Invalid auth header!" });
+  } else if (authMethod !== "Bearer") {
+    return res
+      .status(400)
+      .json({ success: false, message: "Error : Invalid auth method!" });
+  }
+  //get the refreshToken list from database by tokenPoayloads id
+  const profileRepo = getRepository(Profile);
+  const refreshTokenPayloads = jwtDecode<RefreshToken>(refreshToken);
+  if (!refreshTokenPayloads) {
+    return res.json({
+      success: false,
+      error: {
+        message: "Refresh Token not valid",
+      },
+    });
+  }
+  const userProfile = await profileRepo.findOne({
+    where: { id: refreshTokenPayloads.id },
+    relations: ["user"],
+  });
+  //if no user
+  if (!userProfile) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Error : User not exist!" });
+  }
+  //check is the token in the list or not
+  let refreshTokenList = userProfile.user.refreshToken as string[];
+  //not in the list
+  if (!refreshTokenList.includes(refreshToken)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Error : Token is not in the list!" });
+  }
+  //in the list
+  refreshTokenList = refreshTokenList.filter((token) => token != refreshToken);
+  //create a update user form
+  userProfile.user.refreshToken = refreshTokenList;
+  await getRepository(User).save(userProfile.user);
+  return res
+    .status(200)
+    .json({ success: true, message: "Refresh token removed." });
 });
 
 export { router as authRouter };
