@@ -166,7 +166,7 @@ router.post("/token/access", async (req, res) => {
       .status(400)
       .json({ success: false, message: "Error : Invalid auth method!" });
   }
-  const token = jwtVerify<AccessTokenInterface>(accessToken, accessTokenSecret);
+  const token = jwtVerify<AccessToken>(accessToken, accessTokenSecret);
   if (!token) {
     return res.json({
       success: false,
@@ -210,7 +210,7 @@ router.post("/token/refresh", async (req, res) => {
   }
 
   //verify refreshToken
-  const refreshTokenPayloads = jwtVerify<RefreshTokenInterface>(
+  const refreshTokenPayloads = jwtVerify<RefreshToken>(
     refreshToken,
     refreshTokenSecret
   );
@@ -281,9 +281,8 @@ router.post("/token/logout", async (req, res) => {
     }
     //get the refreshToken list from database by tokenPoayloads id
     const profileRepo = getRepository(Profile);
-    const refreshTokenPayloads = Jwt.decode(
-      refreshToken
-    ) as RefreshTokenInterface;
+    // FIXME Change to jwtVerifle function and take payload
+    const refreshTokenPayloads = Jwt.decode(refreshToken) as RefreshToken;
     const userProfile = await profileRepo.findOne({
       where: { id: refreshTokenPayloads.id },
       relations: ["user"],
