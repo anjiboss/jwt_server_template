@@ -1,7 +1,22 @@
-# Awesome Project Build with TypeORM
+# JWT Server Boilerplate
 
-Steps to run this project:
+## Set-up
 
-1. Run `npm i` command
-2. Setup database settings inside `ormconfig.json` file
-3. Run `npm start` command
+- Clone Repo.
+- Change dotenv.example to .env.
+- Generate Access Token and Refresh token secret using `crypto`.
+
+```javascript
+  require("crypto").randomBytes(64).toString("hex");
+```
+
+- Change `ormconfig.json.example` to `ormconfig.json` and update databases infomations.
+
+## Build && Run 
+
+- run: `yarn build`
+- then run: `yarn start`
+
+## Development
+- run: `yarn watch`
+- open new therminal and run: `yarn dev`
