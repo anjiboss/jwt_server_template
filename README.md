@@ -14,8 +14,14 @@
 
 ## Build && Run 
 
-- run: `yarn build`
-- then run: `yarn start`
+- run: 
+```
+  yarn build 
+```
+- then run: 
+```
+  yarn start
+```
 
 ## Development
 - run: `yarn watch`
